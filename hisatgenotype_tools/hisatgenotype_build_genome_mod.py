@@ -79,8 +79,12 @@ def build_genotype_genome(base_fname,
     # Read genes or genomics regions
     for database_name in database_list:
         # Extract HLA variants, backbone sequence, and other sequeces
+        
+        #locus_list=[re.sub('_gen.fasta','',file) for file in list(filter(lambda x: '_gen.fasta' in x, os.listdir('hisatgenotype_db/'+database_name.upper()+'/fasta')))]
+        
         typing_common.extract_database_if_not_exists(base=database_name,
-                                                     locus_list=[],            # locus_list
+                                                     #locus_list=locus_list,            # locus_list
+                                                     locus_list=[],
                                                      ix_dir=".",
                                                      inter_gap=inter_gap,
                                                      intra_gap=intra_gap,
