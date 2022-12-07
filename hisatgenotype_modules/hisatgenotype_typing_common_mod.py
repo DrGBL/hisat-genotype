@@ -602,7 +602,7 @@ def extract_database_if_not_exists(base,
                                    inter_gap = 30,
                                    intra_gap = 50,
                                    partial = True,
-                                   verbose = False):
+                                   verbose = True):
     full_base = ix_dir + "/" + base
     fnames = [full_base + "_backbone.fa",
               full_base + "_sequences.fa",
@@ -616,8 +616,27 @@ def extract_database_if_not_exists(base,
     if check_files(fnames):
         return
 
+#extract_vars(base_fname,
+#                 ix_dir,
+#                 locus_list,
+#                 inter_gap,
+#                 intra_gap,
+#                 whole_haplotype,
+#                 min_var_freq,
+#                 ext_seq_len,
+#                 leftshift,
+#                 partial,
+#                 verbose):
+
+
+
     print("Building %s Database" % base,
          file=sys.stderr)
+    print(base)
+    print(ix_dir)
+    print(locus_list)
+    print(inter_gap)
+    print(intra_gap)
     typing_process.extract_vars(base,
                                 ix_dir,
                                 locus_list,
