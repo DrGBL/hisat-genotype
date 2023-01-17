@@ -17,6 +17,9 @@
 #                                                                             #
 # You should have received a copy of the GNU General Public License           #
 # along with HISAT-genotype.  If not, see <http://www.gnu.org/licenses/>.     #
+
+# Modified by Guillaume Butler-Laporte, December 2022                         #
+# guillaume.butler-laporte@mail.mcgill.ca                                     #
 # --------------------------------------------------------------------------- #
 
 import sys
@@ -361,6 +364,10 @@ def args_build_genome(parser):
                         dest="use_clinvar",
                         action="store_true",
                         help="Include variants from ClinVar database")
+    parser.add_argument("--prefix_snps",
+                        dest="prefix_snps",
+                        type=str,
+                        help="Prefix for the snps and haplotype files")
 
 def args_locus_samples(parser):
     parser.add_argument("--region-list",
