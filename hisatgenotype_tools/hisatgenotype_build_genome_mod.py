@@ -17,16 +17,20 @@
 #                                                                             #
 # You should have received a copy of the GNU General Public License           #
 # along with HISAT 2.  If not, see <http://www.gnu.org/licenses/>.            #
+#                                                                             #
+# Modified by Guillaume Butler-Laporte, December 2022                         #
+# guillaume.butler-laporte@mail.mcgill.ca                                     #
 # --------------------------------------------------------------------------- #
 
 import os
 import sys
 import subprocess
 import re
+import sys
 import shutil
 import inspect
 from argparse import ArgumentParser, FileType
-import hisatgenotype_typing_common as typing_common
+import hisatgenotype_typing_common_mod as typing_common
 import hisatgenotype_args as arguments
 
 # --------------------------------------------------------------------------- #
@@ -48,111 +52,43 @@ def build_genotype_genome(base_fname,
                           intra_gap,
                           threads,
                           database_list,
-                          use_clinvar,
-                          use_commonvar,
+                          prefix_snps,
                           aligner,
                           graph_index,
                           verbose):    
-    # Download HISAT2 index
-    typing_common.download_genome_and_index()
-
+    
+    print(database_list)
+    
     # Load genomic sequences
     chr_dic, chr_names, chr_full_names = typing_common.read_genome("genome.fa")
 
     genotype_vars       = {}
-    genotype_haplotypes = {} 
+    genotype_haplotypes = {}
     genotype_clnsig     = {}
-    if use_clinvar:
-        # Extract variants from the ClinVar database
-        CLINVAR_fnames = ["clinvar.vcf.gz",
-                          "clinvar.snp",
-                          "clinvar.haplotype",
-                          "clinvar.clnsig"]
-
-        if not typing_common.check_files(CLINVAR_fnames):
-            if not os.path.exists("clinvar.vcf.gz"):
-                os.system("wget ftp://ftp.ncbi.nlm.nih.gov/pub/clinvar/"\
-                            "vcf_GRCh38/archive/2017/clinvar_20170404.vcf.gz")
-            assert os.path.exists("clinvar.vcf.gz")
-
-            extract_cmd = ["hisat2_extract_snps_haplotypes_VCF.py"]
-            extract_cmd += ["--inter-gap", str(inter_gap),
-                            "--intra-gap", str(intra_gap),
-                            "--genotype-vcf", "clinvar.vcf.gz",
-                            "genome.fa", "/dev/null", "clinvar"]
-            if verbose:
-                print("\tRunning:", ' '.join(extract_cmd), 
-                      file=sys.stderr)
-            proc = subprocess.Popen(extract_cmd, 
-                                    stdout=open("/dev/null", 'w'), 
-                                    stderr=open("/dev/null", 'w'))
-            proc.communicate()
-            if not typing_common.check_files(CLINVAR_fnames):
-                print("Error: extract variants from clinvar failed!", 
-                      file=sys.stderr)
-                sys.exit(1)
-
-        # Read variants to be genotyped
-        genotype_vars = typing_common.read_variants("clinvar.snp")
-
-        # Read haplotypes
-        genotype_haplotypes = typing_common.read_haplotypes("clinvar.haplotype")
-
-        # Read information about clinical significance
-        genotype_clnsig = read_clnsig("clinvar.clnsig")
-
-    if use_commonvar:
-        # Extract variants from dbSNP database
-        # TODO: CB Write script to make local uptodate SNP database from dbSNP 
-        # ftp://ftp.ncbi.nlm.nih.gov/snp/database/README.create_local_dbSNP.txt 
-        commonvar_fbase = "snp144Common"
-        commonvar_fnames = ["%s.snp" % commonvar_fbase,
-                            "%s.haplotype" % commonvar_fbase]
-        if not typing_common.check_files(commonvar_fnames):
-            if not os.path.exists("%s.txt.gz" % commonvar_fbase):
-                os.system("wget http://hgdownload.cse.ucsc.edu/goldenPath/hg38/"\
-                               "database/%s.txt.gz" % commonvar_fbase)
-            assert os.path.exists("%s.txt.gz" % commonvar_fbase)
-            os.system("gzip -cd %s.txt.gz "\
-                         "| awk 'BEGIN{OFS=\"\t\"} "\
-                             "{if($2 ~ /^chr/) {$2 = substr($2, 4)}; "\
-                              "if($2 == \"M\") {$2 = \"MT\"} print}' > %s.txt" \
-                                  % (commonvar_fbase, commonvar_fbase))
-            extract_cmd = ["hisat2_extract_snps_haplotypes_UCSC.py",
-                           "--inter-gap", str(inter_gap),
-                           "--intra-gap", str(intra_gap),
-                           "genome.fa", 
-                           "%s.txt" % commonvar_fbase, 
-                           commonvar_fbase]
-            if verbose:
-                print("\tRunning:", ' '.join(extract_cmd), file=sys.stderr)
-            proc = subprocess.Popen(extract_cmd, 
-                                    stdout=open("/dev/null", 'w'), 
-                                    stderr=open("/dev/null", 'w'))
-            proc.communicate()
-            if not typing_common.check_files(commonvar_fnames):
-                print("Error: extract variants from clinvar failed!", 
-                      file=sys.stderr)
-                sys.exit(1)
-
-        # Read variants to be genotyped
-        genotype_vars = typing_common.read_variants(commonvar_fnames[0])
-
-        # Read haplotypes
-        genotype_haplotypes = typing_common.read_haplotypes(commonvar_fnames[1])
-
+   
+    # Read variants to be genotyped
+    print('Reading snp')
+    genotype_vars = typing_common.read_variants(prefix_snps+'.snp')
+    
+    print('Reading haplotype')
+    # Read haplotypes
+    genotype_haplotypes = typing_common.read_haplotypes(prefix_snps+'.haplotype')
+    print('Done reading snp and haplotype')
+    
     # Genes to be genotyped
     genotype_genes = {}
 
     # Read genes or genomics regions
     for database_name in database_list:
         # Extract HLA variants, backbone sequence, and other sequeces
-        typing_common.extract_database_if_not_exists(database_name,
-                                                     [],            # locus_list
-                                                     inter_gap,
-                                                     intra_gap,
-                                                     True,          # partial?
-                                                     verbose)
+        
+        typing_common.extract_database_if_not_exists(base=database_name,
+                                                     locus_list=[],
+                                                     ix_dir=".",
+                                                     inter_gap=inter_gap,
+                                                     intra_gap=intra_gap,
+                                                     partial=True,          # partial?
+                                                     verbose=verbose)
         locus_fname = "%s.locus" % database_name
         assert os.path.exists(locus_fname)
         for line in open(locus_fname):
@@ -190,8 +126,11 @@ def build_genotype_genome(base_fname,
     link_out_file      = open("%s.link" % base_fname, 'w')
     coord_out_file     = open("%s.coord" % base_fname, 'w')
     clnsig_out_file    = open("%s.clnsig" % base_fname, 'w')
+    print('Writing genotype genome')
     for c in range(len(chr_names)):
         chr           = chr_names[c]
+        print('chr_names[c]')
+        print(chr)
         chr_full_name = chr_full_names[c]
         assert chr in chr_dic
         chr_seq = chr_dic[chr]
@@ -249,7 +188,9 @@ def build_genotype_genome(base_fname,
                 chr_genotype_vari += 1
 
             # Output haplotypes
+            #print(chr_genotype_haplotypes)
             while chr_genotype_hti < len(chr_genotype_haplotypes):
+                #print(chr_genotype_haplotypes[chr_genotype_hti])
                 ht_left, ht_right, ht_vars = chr_genotype_haplotypes[chr_genotype_hti]
                 if ht_right > right:
                     break
@@ -274,7 +215,7 @@ def build_genotype_genome(base_fname,
         prev_right  = 0
         for gene in chr_genes:
             left, right, length, name, family, exon_str, strand = gene
-
+            
             if not graph_index:
                 # Output gene (genotype_genome.gene)
                 print("%s\t%s\t%s\t%d\t%d\t%s\t%s" \
@@ -480,42 +421,6 @@ def build_genotype_genome(base_fname,
     index_cmd = ["samtools", "faidx", "%s.fa" % base_fname]
     subprocess.call(index_cmd)
 
-    # Build indexes based on the above information
-    if graph_index:
-        assert aligner == "hisat2"
-        build_cmd = ["hisat2-build",
-                     "-p", str(threads),
-                     "--snp", "%s.index.snp" % base_fname,
-                     "--haplotype", "%s.haplotype" % base_fname,
-                     "%s.fa" % base_fname,
-                     "%s" % base_fname]
-    else:        
-        assert aligner in ["hisat2", "bowtie2"]
-        build_cmd = ["%s-build" % aligner,
-                     "-p" if aligner == "hisat2" else "--threads", str(threads),
-                     "%s.fa" % base_fname,
-                     "%s" % base_fname]
-    if verbose:
-        print("\tRunning:", ' '.join(build_cmd), 
-              file=sys.stderr)
-        
-    subprocess.call(build_cmd, 
-                    stdout=open("/dev/null", 'w'), 
-                    stderr=open("/dev/null", 'w'))
-
-    if aligner == "hisat2":
-        index_fnames = ["%s.%d.ht2" % (base_fname, i+1) for i in range(8)]
-    else:
-        index_fnames = ["%s.%d.bt2" % (base_fname, i+1) for i in range(4)]
-        index_fnames += ["%s.rev.%d.bt2" % (base_fname, i+1) for i in range(2)]
-    if not typing_common.check_files(index_fnames):
-        print("Error: indexing failed! "\
-               "Perhaps, you may have forgotten to build %s executables?" \
-                    % aligner, 
-              file=sys.stderr)
-        sys.exit(1)
-
-
 # --------------------------------------------------------------------------- #
 # Main function to build index and run script                                 #
 # --------------------------------------------------------------------------- #
@@ -539,7 +444,7 @@ if __name__ == '__main__':
         sys.exit(1)
     
     if not args.base_fname:
-        args.base_fname = 'genotype_genome'    
+        args.base_fname = 'snp151Common_fixed'    
 
     if not args.locus_list:
         database_list = []
@@ -551,11 +456,6 @@ if __name__ == '__main__':
     else:
         database_list = args.locus_list.split(',')
 
-    if args.use_clinvar and args.use_commonvar:
-        print("Error: both --clinvar and --commonvar cannot be used together.", 
-              file=sys.stderr)
-        sys.exit(1)
-
     if args.aligner not in ["hisat2", "bowtie2"]:
         print("Error: --aligner should be either hisat2 or bowtie2.", 
               file=sys.stderr)
@@ -566,8 +466,7 @@ if __name__ == '__main__':
                           args.intra_gap,
                           args.threads,
                           database_list,
-                          args.use_clinvar,
-                          args.use_commonvar,
+                          args.prefix_snps,
                           args.aligner,
                           args.graph_index,
                           args.verbose)
