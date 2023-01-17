@@ -36,10 +36,6 @@ from argparse import ArgumentParser, FileType
 from hisatgenotype_typing_core import genotyping_locus
 from hisatgenotype_typing_process import extract_reads, extract_vars
 
-#increase recursion capacity to 10 times the limit (default is 1000), you can check yours with sys.getrecursionlimit(), from the sys package
-#sys.setrecursionlimit(10000)
-#print('test')
-
 # --------------------------------------------------------------------------- #
 # Auxillary functions for wraper script                                       #
 # --------------------------------------------------------------------------- #
