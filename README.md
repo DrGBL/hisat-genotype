@@ -1,6 +1,8 @@
-# HISAT-genotype
+# HISAT-genotype-modified
 
-This is the official HISAT-genotype Repository.
+This is NOT the official HISAT-genotype Repository. It is a slight modification of the HISAT-genotype software to allow for easy use of the latest IMGT-HLA reference.
+
+## Everything below is for reference, and was copied directely from the HISAT-genotype git
 
 Please see the official website for HISATgenotype:
 https://daehwankimlab.github.io/hisat-genotype/
