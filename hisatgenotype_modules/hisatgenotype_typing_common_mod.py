@@ -21,15 +21,12 @@
 
 import sys
 import os
-from pathlib import Path
 import subprocess
 import re
 import math
 import random
 import errno
 import json
-import pandas as pd
-import pickle
 from copy import deepcopy
 from datetime import datetime
 import hisatgenotype_typing_process as typing_process
@@ -340,113 +337,51 @@ def read_allele_seq(fname, dic = {}, genes = False):
 """ Read variants from '.snp' files """
 """ File format: variant ID, type, gene/allele name, position, sequence """
 def read_variants(fname, genes = False):
-    my_file = Path("variants_dict_snp.pickle")
-    if my_file.is_file():
-        variants_dict = pickle.load(open("variants_dict_snp.pickle", "rb"))
+    vardata  = {}
+    varlist  = {}
+    variants = open(fname, 'r').read()
+    variants = variants.strip("\n").split("\n")
+    while variants:
+        varset = variants.pop(0)
+        var_id, var_type, name, pos, var = varset.split("\t")
+        if var_type == 'Deletion':
+            var = int(var)
+        pos  = int(pos)
+        gene = name.split("*")[0] if genes else name
+        if not gene in vardata:
+            vardata[gene] = {}
+            assert not gene in varlist
+            varlist[gene] = []
+
+        if genes:
+            assert not var_id in vardata[gene]
+            vardata[gene][var_id] = [var_type, pos, var]
+            varlist[gene].append([pos, var_id])
+        else:
+            varlist[gene].append([pos, var_type, var, var_id])
+    for gene in varlist:
+        varlist[gene].sort(key = lambda x: x[0])
+    
+    if genes:
+        return vardata, varlist
     else:
-        variants=pd.read_table(fname, names=['var_id', 'var_type', 'name', 'pos', 'var'])
-        variants=variants[['name', 'pos', 'var_type', 'var', 'var_id']]
-    
-        chr_list=variants['name'].unique()
-    
-        variants_dict={}
-    
-        for chr in chr_list:
-            print(chr)
-            var_tmp=variants.query("name == @chr")
-            var_tmp=var_tmp.drop('name', axis=1)
-            var_tmp=var_tmp.sort_values('pos')
-            var_tmp=var_tmp.values.tolist()
-            for i in range(len(var_tmp)):
-                if var_tmp[i][1]=='deletion':
-                    var_tmp[i][2]=int(var_tmp[i][2])
-            variants_dict[chr]=var_tmp
-    
-        pickle.dump(variants_dict, file = open("variants_dict_snp.pickle", "wb"))
-    
-    return variants_dict
-        
-        
-#def read_variants(fname, genes = False):
-#    vardata  = {}
-#    varlist  = {}
-#    variants = open(fname, 'r').read()
-#    variants = variants.strip("\n").split("\n")
-#    while variants:
-#        varset = variants.pop(0)
-#        var_id, var_type, name, pos, var = varset.split("\t")
-#        #print(var_id)
-#        if var_type == 'Deletion':
-#            var = int(var)
-#        pos  = int(pos)
-#        gene = name.split("*")[0] if genes else name
-#        if not gene in vardata:
-#            vardata[gene] = {}
-#            assert not gene in varlist
-#            varlist[gene] = []
-#        if genes:
-#            assert not var_id in vardata[gene]
-#            vardata[gene][var_id] = [var_type, pos, var]
-#            varlist[gene].append([pos, var_id])
-#        else:
-#            varlist[gene].append([pos, var_type, var, var_id])
-#    for gene in varlist:
-#        varlist[gene].sort(key = lambda x: x[0])
-#    
-#    #pickle.dump(varlist, file = open("varlist.pickle", "wb"))
-#    #varlist_reloaded = pickle.load(open("varlist.pickle", "rb"))
-#    
-#    if genes:
-#        return vardata, varlist
-#    else:
-#        return varlist
+        return varlist
 
 """ Read haplotypes from '.hap' files """
 """ File format: Haplotype ID, allele backbone, left pos, right pos, var list """
 def read_haplotypes(fname):
-    my_file = Path("allele_haplotypes.pickle")
-    if my_file.is_file():
-        allele_haplotypes = pickle.load(open("allele_haplotypes.pickle", "rb"))
-    else:
-        hap=pd.read_table(fname, names=['haplotype_id', 'allele_name', 'left', 'right', 'vars'])
-    
-        chr_list=hap['allele_name'].unique()
-    
-        allele_haplotypes = {}
-    
-        for chr in chr_list:
-            print(chr)
-            hap_tmp=hap.query("allele_name == @chr")
-            hap_tmp=hap_tmp.drop('allele_name', axis=1)
-            hap_tmp=hap_tmp.drop('haplotype_id', axis=1)
-            hap_tmp=hap_tmp.values.tolist()
-            allele_haplotypes[chr]=hap_tmp
-        
-        pickle.dump(allele_haplotypes, file = open("allele_haplotypes.pickle", "wb"))
-    
+    allele_haplotypes = {}
+    haplotypes = open(fname, 'r').read()
+    haplotypes = haplotypes.strip("\n").split("\n")
+    while haplotypes:
+        hap = haplotypes.pop(0)
+        haplotype_id, allele_name, left, right, vars = hap.split()
+        vars = vars.split(',')
+        left, right = int(left), int(right)
+        if allele_name not in allele_haplotypes:
+            allele_haplotypes[allele_name] = []
+        allele_haplotypes[allele_name].append([left, right, vars])
     return allele_haplotypes
-    
-
-    
-    
-#def read_haplotypes(fname):
-#    allele_haplotypes = {}
-#    haplotypes = open(fname, 'r').read()
-#    haplotypes = haplotypes.strip("\n").split("\n")
-#    while haplotypes:
-#        hap = haplotypes.pop(0)
-#        #print(hap)
-#        haplotype_id, allele_name, left, right, vars = hap.split()
-#        vars = vars.split(',')
-#        left, right = int(left), int(right)
-#        if allele_name not in allele_haplotypes:
-#            allele_haplotypes[allele_name] = []
-#        allele_haplotypes[allele_name].append([left, right, vars])
-#    
-#    #pickle.dump(allele_haplotypes, file = open("allele_haplotypes.pickle", "wb"))
-#    #allele_haplotypes_reloaded = pickle.load(open("allele_haplotypes.pickle", "rb"))
-#    
-#    return allele_haplotypes
 
 """ Read linkages from '.link' files """
 """ File format: variant ID, list of alleles"""
@@ -602,7 +537,7 @@ def extract_database_if_not_exists(base,
                                    inter_gap = 30,
                                    intra_gap = 50,
                                    partial = True,
-                                   verbose = True):
+                                   verbose = False):
     full_base = ix_dir + "/" + base
     fnames = [full_base + "_backbone.fa",
               full_base + "_sequences.fa",
@@ -616,27 +551,8 @@ def extract_database_if_not_exists(base,
     if check_files(fnames):
         return
 
-#extract_vars(base_fname,
-#                 ix_dir,
-#                 locus_list,
-#                 inter_gap,
-#                 intra_gap,
-#                 whole_haplotype,
-#                 min_var_freq,
-#                 ext_seq_len,
-#                 leftshift,
-#                 partial,
-#                 verbose):
-
-
-
     print("Building %s Database" % base,
          file=sys.stderr)
-    print(base)
-    print(ix_dir)
-    print(locus_list)
-    print(inter_gap)
-    print(intra_gap)
     typing_process.extract_vars(base,
                                 ix_dir,
                                 locus_list,
