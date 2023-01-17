@@ -17,6 +17,9 @@
 #                                                                             #
 # You should have received a copy of the GNU General Public License           #
 # along with HISAT-genotype.  If not, see <http://www.gnu.org/licenses/>.     #
+#                                                                             #
+# Modified by Guillaume Butler-Laporte, December 2022                         #
+# guillaume.butler-laporte@mail.mcgill.ca                                     #
 # --------------------------------------------------------------------------- #
 
 import sys
@@ -29,7 +32,7 @@ import random
 import glob
 import multiprocessing
 import json
-import hisatgenotype_typing_common as typing_common
+import hisatgenotype_typing_common_mod as typing_common
 import hisatgenotype_validation_check as validation_check
 
 """ Flag to turn on file debugging to run sanity checks """
@@ -341,7 +344,9 @@ def extract_vars(base_fname,
     gene_strand       = {}
     hisatgenotype_db  = "%s/hisatgenotype_db" % ix_dir
     fasta_dname = "%s/%s/fasta" % (hisatgenotype_db, base_fname.upper())
-
+    
+    print(fasta_dname)
+    
     # Check HLA genes
     gene_names = []
     if base_fname in spliced_gene:
@@ -354,6 +359,8 @@ def extract_vars(base_fname,
         if gene_name == "hla":
             continue
         gene_names.append(gene_name)
+        
+    print(gene_names)
 
     gene_names = typing_common.sort_genall(gene_names)
     if locus_list == []:
@@ -598,6 +605,7 @@ def extract_vars(base_fname,
     num_haplotypes = 0
     full_alleles   = {}
     for gene in gene_names:
+        print('Gene: '+gene)
         if gene not in genes:
             continue # Break if the gene was filtered above
 
@@ -655,10 +663,16 @@ def extract_vars(base_fname,
                                                                       full_alleles)
             
             ref_seq             = seqs[names[ref_gene]]
+            #print('ref_seq')
+            #print(ref_seq)
             ref_seq_map         = create_map(ref_seq)
             ref_partial_seq     = partial_seqs[partial_names[ref_gene]]
+            #print('ref_partial_seq')
+            #print(ref_partial_seq)
             ref_partial_seq_map = create_map(ref_partial_seq)
             exons               = gene_exons[gene]
+            #print('exons')
+            #print(exons)
             exon_len            = 0
             ref_exons           = [] # converted exons to MSF file (e.g. A_gen.msf)
             ref_partial_exons   = [] # converted exons to MSF file (e.g. A_nuc.msf)
@@ -1225,7 +1239,10 @@ def extract_vars(base_fname,
 
         print("Length of additional sequences for haplotypes:", add_seq_len, 
               file=sys.stderr)
-
+        
+        print('In typing process, line 1240.')
+        print(list(names.keys()))
+        
         sorted_all_alleles = typing_common.sort_genall(list(names.keys()), 
                                                        alleles = True)
 
