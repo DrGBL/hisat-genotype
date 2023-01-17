@@ -34,7 +34,7 @@ import json
 import pandas as pd
 from copy import deepcopy
 from datetime import datetime
-import hisatgenotype_typing_process_mod as typing_process
+import hisatgenotype_typing_process as typing_process
 import hisatgenotype_validation_check as validation_check
 
 """ Flag to turn on file debugging to run sanity checks """
