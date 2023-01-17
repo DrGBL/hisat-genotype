@@ -1,6 +1,6 @@
 # HISAT-genotype-modified
 
-This is NOT the official HISAT-genotype Repository. It is a slight modification of the HISAT-genotype software to allow for easy use of the latest IMGT-HLA reference.
+This is NOT the official HISAT-genotype Repository. It is only a slight modification of the HISAT-genotype software to allow for easy use of the latest IMGT-HLA reference.
 
 For a guide to building your own indexes, including how to add DRB3, DRB4, and other genes not on the main GRCh38 scaffold, please see here: https://github.com/DrGBL/hisat_genotype_qgp
 
